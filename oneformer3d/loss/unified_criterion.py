@@ -1,7 +1,7 @@
 from mmdet3d.registry import MODELS
 from ..data_processing.structures import InstanceData_
 
-# add 
+# add a new unified criterion for ScanNet
 @MODELS.register_module()
 class ScanNetUnifiedCriterion:
     """Simply call semantic and instance criterions.
