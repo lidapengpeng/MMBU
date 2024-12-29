@@ -3,7 +3,7 @@ import torch.nn.functional as F
 
 from mmdet3d.registry import MODELS
 
-
+# add 
 @MODELS.register_module()
 class ScanNetSemanticCriterion:
     """Semantic criterion for ScanNet.
