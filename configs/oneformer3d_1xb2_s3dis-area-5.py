@@ -10,6 +10,10 @@ num_channels = 64
 num_instance_classes = 7
 num_semantic_classes = 7
 
+# 添加一个visualization_evaluator 
+custom_imports = dict(imports=['oneformer3d.metrics.visualization_evaluator'],
+    allow_failed_imports=False)
+
 model = dict(
     type='S3DISOneFormer3D',
     data_preprocessor=dict(type='Det3DDataPreprocessor'),
@@ -205,7 +209,7 @@ metric_meta = dict(
 # sem_mapping = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 sem_mapping = [0, 1, 2, 3, 4, 5, 6]
 val_evaluator = dict(
-    type='UnifiedSegMetric',
+    type='VisualizationEvaluator',
     # stuff_class_inds=[0, 1, 2, 3, 4, 5, 6, 12],
     # thing_class_inds=[7, 8, 9, 10, 11],
     stuff_class_inds=[0, 1, 2, 3, 4, 5],

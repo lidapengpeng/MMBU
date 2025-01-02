@@ -21,3 +21,4 @@ from .data_processing.scannet_dataset import ScanNetSegDataset_, ScanNet200SegDa
 from .data_processing.s3dis_dataset import S3DISSegDataset_
 from .data_processing.structured3d_dataset import Structured3DSegDataset, ConcatDataset_
 from .data_processing.structures import InstanceData_
+from .metrics.visualization_evaluator import VisualizationEvaluator

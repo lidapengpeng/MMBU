@@ -792,6 +792,9 @@ class S3DISOneFormer3D(Base3DDetector):
         pred_labels = out['cls_preds'][0]
         pred_masks = out['masks'][0]
         pred_scores = out['scores'][0]
+        # 添加调试信息
+        print("Raw points shape:", superpoints.shape)
+        print("Predicted masks shape:", pred_masks.shape)
 
         inst_res = self.pred_inst(pred_masks[:-self.test_cfg.num_sem_cls, :],
                                   pred_scores[:-self.test_cfg.num_sem_cls, :],
