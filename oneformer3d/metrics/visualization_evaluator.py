@@ -4,7 +4,7 @@ import numpy as np
 import os
 import os.path as osp
 import torch
-
+# 新增导出代码
 @METRICS.register_module() 
 class VisualizationEvaluator(UnifiedSegMetric):
     """导出语义分割和实例分割的预测结果"""
