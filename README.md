@@ -24,9 +24,7 @@ oneformer3d
 │   ├── scannet
 │   └── structured3d
 ├── oneformer3d
-│   ├── __pycache__
 ├── data_processing
-│   ├── __pycache__
 │   ├── data_preprocessor.py
 │   ├── formatting.py
 │   ├── loading.py
@@ -36,25 +34,21 @@ oneformer3d
 │   ├── structures.py
 │   └── transforms_3d.py
 ├── loss
-│   ├── __pycache__
 │   ├── instance_criterion.py
 │   ├── semantic_criterion.py
 │   └── unified_criterion.py
 ├── metrics
-│   ├── __pycache__
 │   ├── evaluate_semantic_instance.py
 │   ├── instance_seg_eval.py
 │   ├── instance_seg_metric.py
 │   ├── unified_metric.py
 │   └── visualization_evaluator.py
 ├── models
-│   ├── __pycache__
 │   ├── mink_unet.py
 │   ├── oneformer3d.py
 │   ├── query_decoder.py
 │   └── spconv_unet.py
-├── postprocessing
-│   ├── __pycache__
+├── postprocessing_
 │   ├── mask_matrix_nms.py
 │   └── __init__.py
 ├── tools
