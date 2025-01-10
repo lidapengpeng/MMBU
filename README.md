@@ -84,9 +84,11 @@ oneformer3d
 
 使用以下命令开始训练：
 
+
 ```bash
-PYTHONPATH=./ CUDA_VISIBLE_DEVICES=1,2,3 bash tools/dist_train.sh \
-    configs/oneformer3d_1xb2_s3dis-area-5.py 3
+
+
+PYTHONPATH=./ CUDA_VISIBLE_DEVICES=2,3,4 bash tools/dist_train.sh configs/oneformer3d_1xb2_s3dis-area-5.py 3
 ```
 
 ### 测试模型

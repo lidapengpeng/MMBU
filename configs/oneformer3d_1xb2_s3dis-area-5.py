@@ -85,9 +85,9 @@ model = dict(
 dataset_type = 'S3DISSegDataset_'
 data_root = 'data/s3dis/'
 data_prefix = dict(
-    pts='points',
-    pts_instance_mask='instance_mask',
-    pts_semantic_mask='semantic_mask')
+    pts='',
+    pts_instance_mask='',
+    pts_semantic_mask='')
 
 train_area = [1, 2, 3, 4, 6]
 test_area = 5
@@ -105,7 +105,8 @@ train_pipeline = [
         with_label_3d=False,
         with_bbox_3d=False,
         with_mask_3d=True,
-        with_seg_3d=True),
+        with_seg_3d=True,
+        backend_args=None),
     dict(
         type='PointSample_',
         num_points=200000),
