@@ -129,3 +129,13 @@ PYTHONPATH=./ python tools/test.py \
 ## 🤝 贡献
 
 欢迎提交 issue 和 pull request！
+
+
+- `points/xxxxx.bin`：提取的点云数据。
+- `instance_mask/xxxxx.bin`：每个点云的实例标签，取值范围为 \[0, ${实例个数}\]，其中 0 代表未标注的点。
+- `semantic_mask/xxxxx.bin`：每个点云的语义标签，取值范围为 \[0, 12\]。
+- `s3dis_infos_Area_1.pkl`：区域 1 的数据信息，每个房间的详细信息如下：
+  - info\['point_cloud'\]: {'num_features': 6, 'lidar_idx': sample_idx}.
+  - info\['pts_path'\]: `points/xxxxx.bin` 点云的路径。
+  - info\['pts_instance_mask_path'\]: `instance_mask/xxxxx.bin` 实例标签的路径。
+  - info\['pts_semantic_mask_path'\]: `semantic_mask/xxxxx.bin` 语义标签的路径。
