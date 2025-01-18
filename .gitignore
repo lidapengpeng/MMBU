@@ -43,3 +43,4 @@ work_dirs/
 
 # 忽略所有层级的 .pyc 文件
 **/*.pyc
+pretrained/dinov2-large/model.safetensors

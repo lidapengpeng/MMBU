@@ -1,132 +1,114 @@
-import torch
-import torch.distributed as dist
+import os.path as osp
+import mmengine
 import numpy as np
+import cv2
 from mmdet3d.registry import DATASETS
-from mmdet3d.datasets import S3DISSegDataset_
-from mmdet3d.structures import PointData
 
-@DATASETS.register_module()
-class S3DISMultiViewSegDataset(S3DISSegDataset_):
-    """Support multi-view and multi-GPU S3DIS dataset.
-    
-    This dataset class supports:
-    1. Multiple GPUs with configurable batch size
-    2. Balanced loading of point clouds and images across GPUs
-    3. Flexible number of views per scene
-    """
-    
-    def __init__(self,
-                 data_root,
-                 ann_file,
-                 num_views=6,
-                 test_mode=False,
-                 *args,
-                 **kwargs):
-        super().__init__(data_root=data_root, 
-                        ann_file=ann_file,
-                        test_mode=test_mode,
-                        *args, 
-                        **kwargs)
-        self.num_views = num_views
-        # Initialize distributed info
-        self.dist_info = self._get_dist_info()
-        
-    def _get_dist_info(self):
-        """Get distributed training info."""
-        if dist.is_available() and dist.is_initialized():
-            rank = dist.get_rank()
-            world_size = dist.get_world_size()
-        else:
-            rank = 0
-            world_size = 1
-            
-        return {'rank': rank, 'world_size': world_size}
-    
-    def _distribute_data(self, idx):
-        """Distribute data across GPUs in a balanced way.
-        
-        For each scene:
-        - First GPU handles point cloud and first N/world_size images
-        - Other GPUs handle remaining images evenly
+@DATASETS.register_module(force=True)
+class S3DISMultiViewSegDataset:
+    """最简化版本的数据集类"""
+    def __init__(self, 
+                 data_root, 
+                 ann_file, 
+                 pipeline=None,
+                 test_mode=False):
+        """初始化
+        Args:
+            data_root (str): 数据根目录
+            ann_file (str): 标注文件名
+            pipeline (list[dict]): 数据处理流水线
+            test_mode (bool): 是否为测试模式
         """
-        rank = self.dist_info['rank']
-        world_size = self.dist_info['world_size']
+        self.data_root = data_root
+        self.ann_file = ann_file
+        self.test_mode = test_mode
+        self.pipeline = pipeline
         
-        info = self.data_infos[idx]
-        data = {}
+        # 加载数据
+        self._load_data()
         
-        # Calculate image distribution
-        imgs_per_gpu = self.num_views // world_size
-        extra_imgs = self.num_views % world_size
-        
-        start_img = rank * imgs_per_gpu + min(rank, extra_imgs)
-        end_img = start_img + imgs_per_gpu + (1 if rank < extra_imgs else 0)
-        
-        # GPU 0 loads point cloud + its share of images
-        if rank == 0:
-            # Load point cloud
-            points = self._load_points(info['points'])
-            data['points'] = points
+    def _load_data(self):
+        """加载并检查数据"""
+        # 1. 加载标注文件
+        ann_path = osp.join(self.data_root, self.ann_file)
+        print(f"\nLoading annotation file: {ann_path}")
+        try:
+            data = mmengine.load(ann_path)
+        except Exception as e:
+            raise Exception(f"Error loading {ann_path}: {str(e)}")
             
-            # Load point cloud annotations if in training mode
-            if not self.test_mode:
-                annos = self.get_ann_info(idx)
-                data.update(annos)
+        # 2. 检查数据格式
+        if not isinstance(data, dict) or 'data_list' not in data:
+            raise ValueError(f"Invalid data format in {ann_path}")
+            
+        self.data_infos = data['data_list']
+        print(f"Successfully loaded {len(self.data_infos)} samples")
         
-        # All GPUs load their share of images
-        image_info = info['images']
-        img_paths = image_info['paths'][start_img:end_img]
-        img_poses = [image_info['poses'][p] for p in img_paths]
+        # 3. 打印第一个样本的结构
+        if self.data_infos:
+            print("\nFirst sample structure:")
+            self._print_data_structure(self.data_infos[0])
+            
+    def _print_data_structure(self, data_info, indent=0):
+        """递归打印数据结构"""
+        for key, value in data_info.items():
+            prefix = ' ' * (indent * 2)
+            if isinstance(value, dict):
+                print(f"{prefix}{key}:")
+                self._print_data_structure(value, indent + 1)
+            else:
+                print(f"{prefix}{key}: {type(value)}")
+
+    def _load_images(self, data_info):
+        """加载多视角图像
+        Args:
+            data_info (dict): 单个样本的信息字典
+        Returns:
+            list[np.ndarray]: 图像列表
+        """
+        if 'images' not in data_info:
+            return None
+            
+        images = []
+        for img_path in data_info['images']['paths']:
+            full_path = osp.join(self.data_root, img_path)
+            try:
+                img = cv2.imread(full_path)
+                if img is None:
+                    print(f"Warning: Failed to load image {full_path}")
+                    continue
+                images.append(img)
+            except Exception as e:
+                print(f"Error loading image {full_path}: {str(e)}")
+                continue
+                
+        return images if images else None
+
+    def prepare_data(self, idx):
+        """准备单个样本的数据
+        Args:
+            idx (int): 样本索引
+        Returns:
+            dict: 处理后的数据字典
+        """
+        data_info = self.data_infos[idx]
         
-        data.update({
-            'img_paths': img_paths,
-            'img_poses': img_poses,
-            'scene_idx': idx,
-            'total_views': self.num_views,
-            'view_indices': (start_img, end_img)
-        })
-        
-        return data
+        # 1. 加载图像
+        images = self._load_images(data_info)
+        if images is not None:
+            data_info['img'] = images
+            
+        # 2. 应用数据处理流水线
+        if self.pipeline is not None:
+            data_info = self.pipeline(data_info)
+            
+        return data_info
+
+    def __len__(self):
+        """返回数据集大小"""
+        return len(self.data_infos)
 
     def __getitem__(self, idx):
-        """Get item with balanced distribution across GPUs."""
-        data = self._distribute_data(idx)
-        return self.pipeline(data)
-        
-    def evaluate(self, results, logger=None, **kwargs):
-        """Evaluate with support for distributed evaluation."""
-        # Gather results from all GPUs
-        if dist.is_available() and dist.is_initialized():
-            results = self._gather_results(results)
-            
-        # Only rank 0 performs evaluation
-        if self.dist_info['rank'] == 0:
-            return super().evaluate(results, logger, **kwargs)
-        return None
-        
-    def _gather_results(self, results):
-        """Gather results from all GPUs."""
-        # Implementation of results gathering
-        world_size = self.dist_info['world_size']
-        
-        if world_size == 1:
-            return results
-            
-        # Gather all results
-        all_results = [None for _ in range(world_size)]
-        dist.all_gather_object(all_results, results)
-        
-        if self.dist_info['rank'] == 0:
-            # Merge results
-            merged_results = []
-            for scene_results in zip(*all_results):
-                scene_data = PointData()
-                for gpu_result in scene_results:
-                    if gpu_result is not None:
-                        for k, v in gpu_result.items():
-                            if k not in scene_data:
-                                scene_data[k] = v
-                merged_results.append(scene_data)
-            return merged_results
-            
-        return None 
+        """获取单个样本"""
+        print(f"\nGetting sample {idx}")
+        return self.prepare_data(idx)

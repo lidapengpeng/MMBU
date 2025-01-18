@@ -516,31 +516,38 @@ class Res16UNetBase(BaseModule):
 
     def forward(self, x):
         feature_maps = []
+        
+        print(f"\n[MinkUNet] Input tensor - features: {x.F.shape}, coordinates: {x.C.shape}")
 
         out = self.conv0p1s1(x)
         out = self.bn0(out)
         out_p1 = self.relu(out)
+        print(f"[MinkUNet] After first conv+bn+relu - features: {out_p1.F.shape}")
 
         out = self.conv1p1s2(out_p1)
         out = self.bn1(out)
         out = self.relu(out)
         out_b1p2 = self.block1(out)
+        print(f"[MinkUNet] After block1 - features: {out_b1p2.F.shape}")
 
         out = self.conv2p2s2(out_b1p2)
         out = self.bn2(out)
         out = self.relu(out)
         out_b2p4 = self.block2(out)
+        print(f"[MinkUNet] After block2 - features: {out_b2p4.F.shape}")
 
         out = self.conv3p4s2(out_b2p4)
         out = self.bn3(out)
         out = self.relu(out)
         out_b3p8 = self.block3(out)
+        print(f"[MinkUNet] After block3 - features: {out_b3p8.F.shape}")
 
         # pixel_dist=16
         out = self.conv4p8s2(out_b3p8)
         out = self.bn4(out)
         out = self.relu(out)
         out = self.block4(out)
+        print(f"[MinkUNet] After block4 (encoder output) - features: {out.F.shape}")
 
         feature_maps.append(out)
 
@@ -548,9 +555,11 @@ class Res16UNetBase(BaseModule):
         out = self.convtr4p16s2(out)
         out = self.bntr4(out)
         out = self.relu(out)
+        print(f"[MinkUNet] After first deconv - features: {out.F.shape}")
 
         out = me.cat(out, out_b3p8)
         out = self.block5(out)
+        print(f"[MinkUNet] After block5 - features: {out.F.shape}")
 
         feature_maps.append(out)
 
@@ -558,9 +567,11 @@ class Res16UNetBase(BaseModule):
         out = self.convtr5p8s2(out)
         out = self.bntr5(out)
         out = self.relu(out)
+        print(f"[MinkUNet] After second deconv - features: {out.F.shape}")
 
         out = me.cat(out, out_b2p4)
         out = self.block6(out)
+        print(f"[MinkUNet] After block6 - features: {out.F.shape}")
 
         feature_maps.append(out)
 
@@ -568,9 +579,11 @@ class Res16UNetBase(BaseModule):
         out = self.convtr6p4s2(out)
         out = self.bntr6(out)
         out = self.relu(out)
+        print(f"[MinkUNet] After third deconv - features: {out.F.shape}")
 
         out = me.cat(out, out_b1p2)
         out = self.block7(out)
+        print(f"[MinkUNet] After block7 - features: {out.F.shape}")
 
         feature_maps.append(out)
 
@@ -578,9 +591,11 @@ class Res16UNetBase(BaseModule):
         out = self.convtr7p2s2(out)
         out = self.bntr7(out)
         out = self.relu(out)
+        print(f"[MinkUNet] After final deconv - features: {out.F.shape}")
 
         out = me.cat(out, out_p1)
         out = self.block8(out)
+        print(f"[MinkUNet] Final output - features: {out.F.shape}")
 
         feature_maps.append(out)
 

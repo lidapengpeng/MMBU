@@ -1,12 +1,11 @@
 # Adapted from mmdet3d/datasets/transforms/formating.py
-import torch
 import numpy as np
+from .structures import InstanceData_
 from mmdet3d.datasets.transforms import Pack3DDetInputs
 from mmdet3d.datasets.transforms.formating import to_tensor
 from mmdet3d.registry import TRANSFORMS
 from mmdet3d.structures import BaseInstance3DBoxes, Det3DDataSample, PointData
 from mmdet3d.structures.points import BasePoints
-from .structures import InstanceData_
 
 
 @TRANSFORMS.register_module()
