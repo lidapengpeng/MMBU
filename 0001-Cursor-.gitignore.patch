@@ -1,0 +1,28 @@
+From 11dabe0aad0fe10546042e7d681b35f44a12dc35 Mon Sep 17 00:00:00 2001
+From: lidapengpeng <760715590@qq.com>
+Date: Mon, 5 May 2025 15:06:58 +0000
+Subject: [PATCH] =?UTF-8?q?=E5=B0=86Cursor=E9=85=8D=E7=BD=AE=E6=96=87?=
+ =?UTF-8?q?=E4=BB=B6=E6=B7=BB=E5=8A=A0=E5=88=B0.gitignore?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ .gitignore | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/.gitignore b/.gitignore
+index 6d329e0..b9d84e3 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -44,3 +44,7 @@ work_dirs/
+ # 忽略所有层级的 .pyc 文件
+ **/*.pyc
+ pretrained/dinov2-large/model.safetensors
++
++# Cursor配置文件
++\Users\Admin\.cursor\mcp.json
++c:\Users\Admin\.cursor\mcp.json
+-- 
+2.17.1
+
