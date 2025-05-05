@@ -2,6 +2,7 @@
 import argparse
 import logging
 import os
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:128"
 import os.path as osp
 
 from mmengine.config import Config, DictAction
@@ -122,6 +123,9 @@ def main():
     if 'runner_type' not in cfg:
         # build the default runner
         runner = Runner.from_cfg(cfg)
+        # 在训练前打印模型结构
+        print("训练前模型结构：")
+        print(runner.model)
     else:
         # build customized runner from the registry
         # if 'runner_type' is set in the cfg

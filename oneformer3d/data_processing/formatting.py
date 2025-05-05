@@ -6,6 +6,8 @@ from mmdet3d.datasets.transforms.formating import to_tensor
 from mmdet3d.registry import TRANSFORMS
 from mmdet3d.structures import BaseInstance3DBoxes, Det3DDataSample, PointData
 from mmdet3d.structures.points import BasePoints
+import torch
+import cv2
 
 
 @TRANSFORMS.register_module()
@@ -24,6 +26,7 @@ class Pack3DDetInputs_(Pack3DDetInputs):
         'gt_bboxes_3d', 'gt_labels_3d', 'attr_labels', 'depths', 'centers_2d',
         'gt_sp_masks'
     ]
+
 
     def pack_single_results(self, results: dict) -> dict:
         """Method to pack the single input data. when the value in this dict is
@@ -48,10 +51,24 @@ class Pack3DDetInputs_(Pack3DDetInputs):
         if 'points' in results:
             if isinstance(results['points'], BasePoints):
                 results['points'] = results['points'].tensor
-
-        if 'img' in results:
+        if 'img' in results:      
+            # 强制转换为列表形式
+            if isinstance(results['img'], np.ndarray) and len(results['img'].shape) == 4:
+                # 将 (N, H, W, C) 的数组转回列表 [H, W, C]
+                imgs_list = [results['img'][i] for i in range(results['img'].shape[0])]
+                results['img'] = imgs_list
+            
             if isinstance(results['img'], list):
                 # process multiple imgs in single frame
+                # First, determine the target shape - either first image or a fixed size
+                target_shape = (896, 1344)  # Default target shape
+                
+                # Resize all images to the same target shape
+                for i in range(len(results['img'])):
+                    if results['img'][i].shape[:2] != target_shape:
+                        import cv2
+                        results['img'][i] = cv2.resize(results['img'][i], (target_shape[1], target_shape[0]))
+                        
                 imgs = np.stack(results['img'], axis=0)
                 if imgs.flags.c_contiguous:
                     imgs = to_tensor(imgs).permute(0, 3, 1, 2).contiguous()
@@ -100,9 +117,16 @@ class Pack3DDetInputs_(Pack3DDetInputs):
         gt_instances_3d = InstanceData_()
         gt_instances = InstanceData_()
         gt_pts_seg = PointData()
+        
+        # 6. 处理元信息， 新增了'cam_params', 'world2img'，别的都在原始的meta_keys，格式为numpy
+        meta_keys = ['filename', 'ori_shape', 'img_shape', 'lidar2img',
+                    'depth2img', 'cam2img', 'pad_shape', 'scale_factor', 
+                    'flip', 'pcd_horizontal_flip', 'pcd_vertical_flip', 
+                    'box_mode_3d', 'box_type_3d', 'img_norm_cfg', 'num_views',
+                    'cam_params', 'world2img'] 
 
         img_metas = {}
-        for key in self.meta_keys:
+        for key in meta_keys:
             if key in results:
                 img_metas[key] = results[key]
         data_sample.set_metainfo(img_metas)
@@ -136,7 +160,9 @@ class Pack3DDetInputs_(Pack3DDetInputs):
             data_sample.eval_ann_info = None
 
         packed_results = dict()
+        # 包含模型所有标注信息
         packed_results['data_samples'] = data_sample
+        # 包含模型输入数据
         packed_results['inputs'] = inputs
 
         return packed_results

@@ -274,6 +274,9 @@ class PointInstClassMapping_(BaseTransform):
             pts_instance_mask[pts_semantic_mask == 1] = \
                 pts_instance_mask.max() + 1
         
+        # 将-100替换为-1
+        pts_instance_mask[pts_instance_mask == -100] = -1
+
         pts_instance_mask[pts_semantic_mask == self.num_classes] = -1
         pts_semantic_mask[pts_semantic_mask == self.num_classes] = -1
 
@@ -342,7 +345,8 @@ class PointSample_(PointSample):
 
         if pts_instance_mask is not None:
             pts_instance_mask = pts_instance_mask[choices]
-            
+            # 将-100替换为-1
+            pts_instance_mask[pts_instance_mask == -100] = -1
             idxs = np.unique(pts_instance_mask)
             mapping = np.zeros(np.max(idxs) + 2, dtype=int)
             new_idxs = np.arange(len(idxs))

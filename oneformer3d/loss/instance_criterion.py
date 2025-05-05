@@ -105,6 +105,8 @@ class InstanceCriterion:
                  fix_dice_loss_weight, iter_matcher, fix_mean_loss=False):
         self.matcher = TASK_UTILS.build(matcher)
         class_weight = [1] * num_classes + [non_object_weight]
+        class_weight[5] = 0.01
+        class_weight[6] = 2.5
         self.class_weight = class_weight
         self.loss_weight = loss_weight
         self.num_classes = num_classes

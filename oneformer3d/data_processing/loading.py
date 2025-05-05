@@ -16,7 +16,7 @@ class LoadAnnotations3D_(LoadAnnotations3D):
         with_sp_mask_3d (bool): Whether to load super point maks. 
     """
 
-    def __init__(self, with_sp_mask_3d, **kwargs):
+    def __init__(self, with_sp_mask_3d=False, **kwargs):
         self.with_sp_mask_3d = with_sp_mask_3d
         super().__init__(**kwargs)
 
@@ -64,6 +64,18 @@ class LoadAnnotations3D_(LoadAnnotations3D):
         results = super().transform(results)
         if self.with_sp_mask_3d:
             results = self._load_sp_pts_3d(results)
+        
+        # 处理评估标注
+        if 'eval_ann_info' in results:
+            if self.with_mask_3d:
+                pts_instance_mask = results.get('pts_instance_mask', None)
+                pts_semantic_mask = results.get('pts_semantic_mask', None)
+                if pts_instance_mask is not None and pts_semantic_mask is not None:
+                    results['eval_ann_info'].update({
+                        'pts_instance_mask': pts_instance_mask,
+                        'pts_semantic_mask': pts_semantic_mask
+                    })
+        
         return results
 
 

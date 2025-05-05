@@ -208,57 +208,26 @@ class SpConvUNet(nn.Module):
         Returns:
             SparseConvTensor: Output tensor.
         """
-        print(f"\n[SpConvUNet] 层级 {len(self.num_planes)} 处理:")
-        print(f"- 输入特征形状: {input.features.shape}")
-        print(f"- 输入空间形状: {input.spatial_shape}")
-        print(f"- 当前通道配置: {self.num_planes}")
-        
-        # 1. 初始块处理
         output = self.blocks(input)
-        print(f"\n1. 初始块处理后:")
-        print(f"- 特征形状: {output.features.shape}")
-        print(f"- 空间形状: {output.spatial_shape}")
-        
         identity = spconv.SparseConvTensor(output.features, output.indices,
                                            output.spatial_shape,
                                            output.batch_size)
 
         if len(self.num_planes) > 1:
-            # 2. 下采样
             output_decoder = self.conv(output)
-            print(f"\n2. 下采样后:")
-            print(f"- 特征形状: {output_decoder.features.shape}")
-            print(f"- 空间形状: {output_decoder.spatial_shape}")
-            
-            # 3. 递归处理
             if self.return_blocks:
-                output_decoder, previous_outputs = self.u(output_decoder, previous_outputs)
+                output_decoder, previous_outputs = self.u(
+                    output_decoder, previous_outputs)
             else:
                 output_decoder = self.u(output_decoder)
-            print(f"\n3. 递归处理后:")
-            print(f"- 特征形状: {output_decoder.features.shape}")
-            print(f"- 空间形状: {output_decoder.spatial_shape}")
-            
-            # 4. 上采样
             output_decoder = self.deconv(output_decoder)
-            print(f"\n4. 上采样后:")
-            print(f"- 特征形状: {output_decoder.features.shape}")
-            print(f"- 空间形状: {output_decoder.spatial_shape}")
 
-            # 5. 特征拼接
             output = output.replace_feature(
                 torch.cat((identity.features, output_decoder.features), dim=1))
-            print(f"\n5. 特征拼接后:")
-            print(f"- 特征形状: {output.features.shape}")
-            print(f"- 空间形状: {output.spatial_shape}")
-            
-            # 6. 最终处理
             output = self.blocks_tail(output)
-            print(f"\n6. 最终处理后:")
-            print(f"- 特征形状: {output.features.shape}")
-            print(f"- 空间形状: {output.spatial_shape}")
 
         if self.return_blocks:
+            # NOTE: to avoid the residual bug
             if previous_outputs is None:
                 previous_outputs = []
             previous_outputs.append(output)

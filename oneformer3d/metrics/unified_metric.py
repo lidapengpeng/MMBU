@@ -85,7 +85,7 @@ class UnifiedSegMetric(SegMetric):
 
         for eval_ann, single_pred_results in results:
             
-            if self.metric_meta['dataset_name'] == 'S3DIS':
+            if self.metric_meta['dataset_name'] == 'S3DIS' or self.metric_meta['dataset_name'] == 'UrbanBIS':
                 pan_gt = {}
                 pan_gt['pts_semantic_mask'] = eval_ann['pts_semantic_mask']
                 pan_gt['pts_instance_mask'] = \
@@ -114,8 +114,8 @@ class UnifiedSegMetric(SegMetric):
             gt_semantic_masks_sem_task.append(eval_ann['pts_semantic_mask'])            
             pred_semantic_masks_sem_task.append(
                 single_pred_results['pts_semantic_mask'][0])
-
-            if self.metric_meta['dataset_name'] == 'S3DIS':
+            # 如果数据集是S3DIS，则直接使用eval_ann中的实例分割标签
+            if self.metric_meta['dataset_name'] == 'S3DIS' or self.metric_meta['dataset_name'] == 'UrbanBIS':
                 gt_semantic_masks_inst_task.append(eval_ann['pts_semantic_mask'])
                 gt_instance_masks_inst_task.append(eval_ann['pts_instance_mask'])  
             else:
@@ -148,24 +148,32 @@ class UnifiedSegMetric(SegMetric):
             label2cat,
             ignore_index[0],
             logger=logger)
-
-        if self.metric_meta['dataset_name'] == 'S3DIS':
+        if self.metric_meta['dataset_name'] == 'S3DIS' or self.metric_meta['dataset_name'] == 'UrbanBIS':
             # 确保只使用thing类别的ID和类别名称
-            thing_valid_class_ids = tuple([self.valid_class_ids[i] for i in self.thing_class_inds])
-            thing_class_names = [classes[i] for i in self.thing_class_inds]
+            # thing_valid_class_ids = tuple([self.valid_class_ids[i] for i in self.thing_class_inds])
+            # thing_class_names = [classes[i] for i in self.thing_class_inds]
             
-            # 修正预测标签范围
-            for labels in pred_instance_labels:
-                labels[labels >= len(thing_valid_class_ids)] = 0
+            # # 修正预测标签范围
+            # for labels in pred_instance_labels:
+            #     labels[labels >= len(thing_valid_class_ids)] = 0
             
+            # ret_inst = instance_seg_eval(
+            #     gt_semantic_masks_inst_task,
+            #     gt_instance_masks_inst_task,
+            #     pred_instance_masks_inst_task,
+            #     pred_instance_labels,
+            #     pred_instance_scores,
+            #     valid_class_ids=thing_valid_class_ids,
+            #     class_labels=thing_class_names,
+            #     logger=logger)
             ret_inst = instance_seg_eval(
                 gt_semantic_masks_inst_task,
                 gt_instance_masks_inst_task,
                 pred_instance_masks_inst_task,
                 pred_instance_labels,
                 pred_instance_scores,
-                valid_class_ids=thing_valid_class_ids,
-                class_labels=thing_class_names,
+                valid_class_ids=self.valid_class_ids,
+                class_labels=classes[:-1],
                 logger=logger)
         else:
             ret_inst = instance_seg_eval(
@@ -182,6 +190,11 @@ class UnifiedSegMetric(SegMetric):
         for ret, keys in zip((ret_sem, ret_inst, ret_pan), self.logger_keys):
             for key in keys:
                 metrics[key] = ret[key]
+        # 新增对building类别的AP_50指标的计算
+        if 'classes' in ret_inst and 'building' in ret_inst['classes']:
+            if 'ap50%' in ret_inst['classes']['building']:
+                metrics['building_ap50%'] = ret_inst['classes']['building']['ap50%']
+                logger.info(f"Building AP50%: {metrics['building_ap50%']:.4f}")
         return metrics
 
     def map_inst_markup(self,
