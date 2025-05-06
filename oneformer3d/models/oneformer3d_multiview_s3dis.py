@@ -12,13 +12,14 @@ from mmdet3d.models import Base3DDetector
 
 import MinkowskiEngine as ME
 from .oneformer3d import ScanNetOneFormer3DMixin
-from .dino_extractor_adater import DINODPTModel
+
 from .projection import VoxelProjector
 from .feature_fusion import MultiModalFeatureFusion, CrossViewFeatureFusion
 from ..postprocessing.mask_matrix_nms import mask_matrix_nms
 import traceback
 import numpy as np
 from .feature_visualization import visualize_feature_map_multistage
+from .dino_extractor import DINOv2Extractor
 
 
 
@@ -75,13 +76,7 @@ class MultiViewS3DISOneFormer3D(Base3DDetector):
         
         # 初始化多视角相关组件
         if self.use_multiview:
-            self.image_encoder = DINODPTModel(
-                model_path='/workspace/data/oneformer3d/pretrained/dinov2-large',
-                output_dim=64,
-                target_size=(896, 1344),
-                device='cuda'
-            )
-            
+            self.image_encoder = DINOv2Extractor()          
             self.projector = VoxelProjector(voxel_size=0.33)
             self.cross_view_fusion = CrossViewFeatureFusion(
                 in_channels=64,
@@ -168,13 +163,7 @@ class MultiViewS3DISOneFormer3D(Base3DDetector):
         for view_idx, (image, proj_mat, img_shape) in enumerate(zip(images, proj_matrices, img_shapes)):
             # 处理的是每一个视角           
             # 使用DINODPTModel提取特征
-            with torch.no_grad():  # 确保编码器部分不计算梯度
-                # 提取DINOv2特征
-                dino_features = self.image_encoder.encoder.extract_features(image, layer_idx=24)
-            
-            # 通过可训练的decoder处理特征
-            image_features = self.image_encoder.decoder(dino_features)
-            image_features = image_features.squeeze(0)
+            image_features = self.image_encoder.extract_features(image)
             # print(f"image_features.shape: {image_features.shape}")
             # -----------------------------------------------------------------# 
             # 可视化图像特征

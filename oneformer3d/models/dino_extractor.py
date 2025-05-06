@@ -14,6 +14,7 @@ from mmdet3d.registry import MODELS
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
 
+
 class BiFPN(nn.Module):
     """双向特征金字塔网络，用于特征降维和融合"""
     def __init__(self, in_channels=1024, out_channels=64):
@@ -121,7 +122,7 @@ class FeatureAdapter(nn.Module):
 class DINOv2Extractor(BaseModule):
     """DINOv2特征提取器"""
     def __init__(self, 
-                 model_path='/workspace/data/oneformer3d/pretrained/dinov2-large', 
+                 model_path=os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'pretrained/dinov2-large')),
                  device='cuda',
                  adapter_hidden_dim=128,
                  adapter_out_dim=64,
@@ -134,14 +135,17 @@ class DINOv2Extractor(BaseModule):
         self.patch_w = 96
         self.use_adapter = use_adapter
         
+        # 将encoder和decoder分开组织
+        self.encoder = None
+        self.decoder = None
+        
         try:
             from transformers import AutoModel
-            self.model = AutoModel.from_pretrained(model_path, local_files_only=True)
-            self.model = self.model.to(device)
-            self.model.eval()  # 设置为评估模式，冻结权重
+            self.encoder = AutoModel.from_pretrained(model_path, local_files_only=True)
+            self.encoder = self.encoder.to(device)
+            self.encoder.eval()
             
-            # 冻结DINO模型的所有参数
-            for param in self.model.parameters():
+            for param in self.encoder.parameters():
                 param.requires_grad = False
                 
             print("DINOv2 model loaded successfully from local checkpoint")
@@ -151,35 +155,24 @@ class DINOv2Extractor(BaseModule):
             print(traceback.format_exc())
             raise
         
-        # 初始化BiFPN
+        # 将BiFPN和Adapter组织为decoder
         bifpn_out_channels = 64
-        self.bifpn = BiFPN(in_channels=self.feat_dim, out_channels=bifpn_out_channels).to(device)
+        self.decoder = nn.ModuleDict({
+            'bifpn': BiFPN(in_channels=self.feat_dim, out_channels=bifpn_out_channels).to(device)
+        })
         
-        # 初始化特征适配器/投影器
         if use_adapter:
-            self.adapter = FeatureAdapter(
+            self.decoder['adapter'] = FeatureAdapter(
                 in_channels=bifpn_out_channels,
                 hidden_dim=adapter_hidden_dim,
                 out_channels=adapter_out_dim,
                 use_residual=use_residual
             ).to(device)
-        
-    def freeze_dino_backbone(self):
-        """冻结DINO主干网络的参数"""
-        for param in self.model.parameters():
+
+    def freeze_encoder(self):
+        """冻结编码器参数"""
+        for param in self.encoder.parameters():
             param.requires_grad = False
-            
-    def freeze_bifpn(self):
-        """冻结BiFPN模块的参数"""
-        for param in self.bifpn.parameters():
-            param.requires_grad = False
-    
-    def train(self, mode=True):
-        """重写train方法，确保DINO模型始终处于eval模式"""
-        super().train(mode)
-        self.model.eval()  # 确保DINO模型始终处于eval模式
-        return self
-        
 
     def extract_features(self, image_tensor):
         """提取图像特征
@@ -211,7 +204,7 @@ class DINOv2Extractor(BaseModule):
         # 提取特征
         with torch.no_grad():
             try:
-                outputs = self.model(img_tensor, output_hidden_states=True)
+                outputs = self.encoder(img_tensor, output_hidden_states=True)
                 features = outputs.hidden_states[-1]  # [B, N_patches + 1, feat_dim]
                 features = features[:, 1:, :]  # [B, N_patches, feat_dim]
                 
@@ -221,7 +214,7 @@ class DINOv2Extractor(BaseModule):
                 features = features.reshape(B, -1, self.patch_h, self.patch_w)
                 
                 # 通过BiFPN处理特征
-                features = self.bifpn(features)
+                features = self.decoder['bifpn'](features)
                 
             except Exception as e:
                 print(f"Error extracting features: {str(e)}")
@@ -231,7 +224,7 @@ class DINOv2Extractor(BaseModule):
         
         # 通过特征适配器/投影器处理特征（如果启用）
         if self.use_adapter:
-            features = self.adapter(features)
+            features = self.decoder['adapter'](features)
         
         features = features.squeeze(0)  # [C, H, W]
         

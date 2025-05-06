@@ -1,0 +1,24 @@
+{
+  "mcpServers": {
+    "arxiv-mcp-server": {
+      "command": "uv",
+      "args": [
+        "tool",
+        "run",
+        "arxiv-mcp-server",
+        "--storage-path",
+        "C:\\Users\\Admin\\.cursor\\mcp\\storage"
+      ]
+    },
+    "brave-search": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-brave-search"
+      ],
+      "env": {
+        "BRAVE_API_KEY": "BSAbexTtXZPf9XP2kEOHCz2QemZoGi-"
+      }
+    }
+  }
+} 

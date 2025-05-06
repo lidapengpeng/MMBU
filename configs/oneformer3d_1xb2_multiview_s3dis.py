@@ -1,3 +1,4 @@
+
 # 1、基础配置
 _base_ = [
     'mmdet3d::_base_/default_runtime.py',
@@ -79,7 +80,7 @@ model = dict(
 
 # 3、数据集配置
 dataset_type = 'URBANBISDataset'  # 使用多视角数据集_用于分割
-data_root = '/workspace/sync_data/data/oneformer3d/data/s3dis-urbanbis-yuehai-all-instance'  # 使用绝对路径
+data_root = 'data/s3dis-urbanbis-yuehai-all-instance' 
 data_prefix = dict(
     pts='',  # 点云数据目录
     pts_instance_mask='',  # 实例掩码目录
@@ -305,7 +306,7 @@ load_from = 'work_dirs/tmp/best_all_ap_50%_epoch_280_fixed.pth'
 train_cfg = dict(
     type='EpochBasedTrainLoop',
     max_epochs=400,
-    val_interval=10)  # 每16个epoch验证一次
+    val_interval=1)  # 每16个epoch验证一次
 val_cfg = dict(type='ValLoop')
 test_cfg = dict(type='TestLoop')
 
