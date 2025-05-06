@@ -110,8 +110,8 @@ class MultiViewS3DISOneFormer3D(Base3DDetector):
             # 冻结DINOv2 Encoder
             self.image_encoder.freeze_encoder()
             
-            # 确保decoder是可训练的
-            for param in self.image_encoder.decoder.parameters():
+            # 确保adapter是可训练的
+            for param in self.image_encoder.adapter.parameters():
                 param.requires_grad = True
             
             # 验证参数状态
@@ -129,7 +129,7 @@ class MultiViewS3DISOneFormer3D(Base3DDetector):
             encoder_params = sum(p.numel() for p in self.image_encoder.encoder.parameters() 
                                if p.requires_grad)
             # 检查解码器参数
-            decoder_params = sum(p.numel() for p in self.image_encoder.decoder.parameters() 
+            decoder_params = sum(p.numel() for p in self.image_encoder.adapter.parameters() 
                                if p.requires_grad)
             
             # 检查其他模块参数 - 需要检查对象是否有parameters方法
@@ -164,7 +164,7 @@ class MultiViewS3DISOneFormer3D(Base3DDetector):
             # 处理的是每一个视角           
             # 使用DINODPTModel提取特征
             image_features = self.image_encoder.extract_features(image)
-            # print(f"image_features.shape: {image_features.shape}")
+            print(f"image_features.shape: {image_features.shape}")
             # -----------------------------------------------------------------# 
             # 可视化图像特征
             # visualize_feature_map_multistage(image_features, output_dir="./feature_visualizations", prefix=f'view_{view_idx}')

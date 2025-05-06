@@ -45,6 +45,16 @@ work_dirs/
 **/*.pyc
 pretrained/dinov2-large/model.safetensors
 
-# Cursor配置文件
-\Users\Admin\.cursor\mcp.json
-c:\Users\Admin\.cursor\mcp.json
+# Cursor配置文件（修改格式）
+.cursor/
+**/.cursor/
+*/.cursor/
+
+# TensorBoard日志（需要添加）
+tensorboard_logs/
+**/tensorboard_logs/
+*.tfevents.*
+
+# 修改Windows路径格式
+\Users\Admin\.cursor\
+c:\Users\Admin\.cursor\

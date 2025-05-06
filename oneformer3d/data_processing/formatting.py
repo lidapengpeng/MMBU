@@ -76,20 +76,20 @@ class Pack3DDetInputs_(Pack3DDetInputs):
                     imgs = to_tensor(
                         np.ascontiguousarray(imgs.transpose(0, 3, 1, 2)))
                 results['img'] = imgs
-            else:
-                img = results['img']
-                if len(img.shape) < 3:
-                    img = np.expand_dims(img, -1)
-                # To improve the computational speed by by 3-5 times, apply:
-                # `torch.permute()` rather than `np.transpose()`.
-                # Refer to https://github.com/open-mmlab/mmdetection/pull/9533
-                # for more details
-                if img.flags.c_contiguous:
-                    img = to_tensor(img).permute(2, 0, 1).contiguous()
-                else:
-                    img = to_tensor(
-                        np.ascontiguousarray(img.transpose(2, 0, 1)))
-                results['img'] = img
+            # else:
+            #     img = results['img']
+            #     if len(img.shape) < 3:
+            #         img = np.expand_dims(img, -1)
+            #     # To improve the computational speed by by 3-5 times, apply:
+            #     # `torch.permute()` rather than `np.transpose()`.
+            #     # Refer to https://github.com/open-mmlab/mmdetection/pull/9533
+            #     # for more details
+            #     if img.flags.c_contiguous:
+            #         img = to_tensor(img).permute(2, 0, 1).contiguous()
+            #     else:
+            #         img = to_tensor(
+            #             np.ascontiguousarray(img.transpose(2, 0, 1)))
+            #     results['img'] = img
 
         for key in [
                 'proposals', 'gt_bboxes', 'gt_bboxes_ignore', 'gt_labels',
