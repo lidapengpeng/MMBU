@@ -48,9 +48,8 @@ class DINOv2Extractor(BaseModule):
             raise
         
         # 特征适配器
-        self.adapter = ProgressiveDecoder(
+        self.adapter = FeatureAdapter(
             in_channels=self.feat_dim,  # 1024
-            hidden_dim=512,
             out_channels=adapter_out_dim  # 64
         ).to(device)
 
@@ -108,70 +107,23 @@ class DINOv2Extractor(BaseModule):
         
         return features
 
-class ProgressiveDecoder(nn.Module):
-    def __init__(self, in_channels=1024, hidden_dim=512, out_channels=64):
+class FeatureAdapter(nn.Module):
+    def __init__(self, in_channels=1024, out_channels=64):
         super().__init__()
         
-        def conv_block(in_ch, out_ch):
-            return nn.Sequential(
-                nn.Conv2d(in_ch, out_ch, 3, padding=1),
-                nn.BatchNorm2d(out_ch),
-                nn.ReLU(inplace=True)
-            )
-        
-        def residual_transform(in_ch, out_ch):
-            return nn.Sequential(
-                nn.Conv2d(in_ch, out_ch, 1),
-                nn.BatchNorm2d(out_ch),
-                nn.ReLU(inplace=True)
-            )
-        
-        # 输入特征图: [1024, 64, 96]
-        
-        # 第一次上采样: [1024, 64, 96] -> [512, 128, 192]
-        self.up1 = nn.Sequential(
-            nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True),
-            conv_block(in_channels, hidden_dim)
-        )
-        self.res1 = residual_transform(hidden_dim, hidden_dim // 2)
-        
-        # 第二次上采样: [512, 128, 192] -> [256, 256, 384]
-        self.up2 = nn.Sequential(
-            nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True),
-            conv_block(hidden_dim, hidden_dim // 2)
-        )
-        self.res2 = residual_transform(hidden_dim // 2, hidden_dim // 4)
-        
-        # 第三次上采样: [256, 256, 384] -> [128, 512, 768]
-        self.up3 = nn.Sequential(
-            nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True),
-            conv_block(hidden_dim // 2, hidden_dim // 4)
-        )
-        self.res3 = residual_transform(hidden_dim // 4, out_channels)
-        
-        # 第四次上采样: [128, 512, 768] -> [64, 896, 1344]
-        self.up4 = nn.Sequential(
-            nn.Upsample(size=(896, 1344), mode='bilinear', align_corners=True),
-            conv_block(hidden_dim // 4, out_channels)
+        # 使用两层1x1卷积逐步降低通道数
+        self.reduce_dim = nn.Sequential(
+            # 第一层: 1024 -> 256
+            nn.Conv2d(in_channels, 256, kernel_size=1),
+            nn.BatchNorm2d(256),
+            nn.ReLU(inplace=True),
+            # 第二层: 256 -> 64
+            nn.Conv2d(256, out_channels, kernel_size=1),
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU(inplace=True)
         )
         
     def forward(self, x):
-        # 第一次上采样和残差
-        x1 = self.up1(x)
-        r1 = self.res1(x1)
-        
-        # 第二次上采样和残差
-        x2 = self.up2(x1)
-        r2 = self.res2(x2)
-        x2 = x2 + F.interpolate(r1, size=x2.shape[2:])
-        
-        # 第三次上采样和残差
-        x3 = self.up3(x2)
-        r3 = self.res3(x3)
-        x3 = x3 + F.interpolate(r2, size=x3.shape[2:])
-        
-        # 最终上采样到目标尺寸
-        x4 = self.up4(x3)
-        x4 = x4 + F.interpolate(r3, size=(896, 1344))
-        
-        return x4
+        # 输入 x: [B, 1024, 64, 96]
+        # 输出: [B, 64, 64, 96]
+        return self.reduce_dim(x)
